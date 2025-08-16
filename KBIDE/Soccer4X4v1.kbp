@@ -1,0 +1,260 @@
+/*
+  Auther : Piyaphat Jaiboon (Fiwza) , Github : Fiwxa.
+  Purpose : Promma science week 4x4Soccer (Striker).
+  Date : 16/08/2025.
+  Contact :
+    Instagram : ปิยะภัทร ใจบุญ / __kf._.py__.
+    Facebook : ปิยะภัทร ใจบุญ.
+    Gmail : fiw.contact.work@gmail.com.
+
+  Suggestion :
+    Go to folder docs.
+  
+  version : 0.0.1 (beta).
+*/
+
+
+// --------------- Configuration ------------------
+
+// ************ system and environment ************
+
+#define device_name "RCSoccerTester" // Replace with your device bluetooth's name;
+
+// Select IDE 
+//#define __ARDUINO__ (ESP32 core version 3.x.x and More dependecies lookup to docs) (Haven't implement yet.)
+#define __KBIDE__ //(Need a ESPRobotV2 from princebot https://github.com/PrinceBot-Ratthanin/ESPRobotV2)
+
+
+#include <Arduino.h>
+#include <stdint.h>
+#include "BluetoothSerial.h"
+
+
+#ifdef __KBIDE__
+#include "ESPRobotV2.h"
+#endif
+
+
+
+
+//Select WHEEL type
+
+//#define OMNI (Haven't implement yet)
+#define MACANUM
+
+#ifdef  __KBIDE__
+
+  #ifdef MACANUM
+    #define UPLEFT_MOTOR 1
+    #define UPRIGHT_MOTOR 2
+    #define DOWNLEFT_MOTOR 3
+    #define DOWNRIGHT_MOTOR 4
+  #elif OMNI
+    #define RIGHT_MOTOR 1
+    #define LIFT_MOTOR 2
+    #define MID_MOTOR 3
+  #endif
+  #define SHOOTER_PIN 13
+#endif
+
+#ifdef __ARDUINO__
+  void init();
+  void waitesp32(String __text);
+  void motor(int __ch, int __sp);
+  #ifdef MACANUM
+    #define MOTOR_PINA1 
+    #define MOTOR_PINA2
+    #define MOTOR_PINB1 
+    #define MOTOR_PINB2
+    #define MOTOR_PINC1 
+    #define MOTOR_PINC2
+    #define MOTOR_PIND1 
+    #define MOTOR_PIND2
+  #elif OMNI
+    #define RIGHT_MOTORPIN1  
+    #define RIGHT_MOTORPIN2
+    #define LIFT_MOTORPIN1
+    #define LIFT_MOTORPIN2
+    #define MID_MOTORPIN1
+    #define MID_MOTORPIN2
+  #endif
+
+  #define SHOOTER_PIN1 
+  #define SHOOTER_PIN2 
+#endif
+
+
+
+// ************************************************
+
+#define MaxSpeed 100
+#define MinSpeed -100
+
+
+// enter a number range 1 - 100
+#define defaultSpeedFD 100
+#define defaultSpeedBD 100
+
+#define defaultSpeedTurnLeft 100
+#define defaultSpeedSlideLeft 100
+#define defaultSpeedUpLeft 100
+#define defaultSpeedDownLeft 100
+
+#define defaultSpeedTurnRight 100
+#define defaultSpeedSlideRight 100
+#define defaultSpeedUpRight 100
+#define defaultSpeedDownRight 100
+
+
+// *************** Input command ******************* 
+
+#define FORWARD_CMD 'F'
+#define BACKWARD_CMD 'B'
+#define TURNLEFT_CMD 'L'
+#define TURNRIGHT_CMD 'R'
+#define SLIDE_LEFT_CMD 'G'
+#define SLIDE_RIGHT_CMD 'I'
+#define STOP_CMD 'S'
+#define SHOOT_BALLS 'V'
+
+// ************************************************
+
+#define BIG -1e5
+#define SMALL 0
+
+
+// ----------------------------------------------
+
+// ------------- Variable -----------------------
+
+BluetoothSerial SerialBT;
+
+// ------------ function prototype ---------------
+
+
+void execcmd(int cmd); // Match and Operate following Command 
+
+void turnleft(int sp);
+void slide_left(int sp);
+void upleft(int sp);
+void downleft(int sp);
+
+void turnright(int sp);
+void slide_right(int sp);
+void upright(int sp);
+void downright(int sp);
+
+void MyBalls_is(int MODE);
+
+
+// -----------------------------------------------
+void setup() {
+  
+  #ifdef __KBIDE__
+    ESPRobotV2();
+  #elif __ARDUINO__
+    init();
+  #endif
+
+  ledcSetup(0, 5000, 8);
+  ledcAttachPin(SHOOTER_PIN, 0);
+  Serial.begin(115200);
+  SerialBT.begin(device_name);
+  
+  // WAIT UNTILL PLESS OK! .
+  #ifdef __KBIDE__
+    wait(); 
+  #elif __ARDUINO__
+    waitesp32();
+  #endif
+}
+
+void loop() {
+  
+  if (Serial.available()) {
+      SerialBT.write(Serial.read());
+  }
+  if (SerialBT.available()) {
+      char cmdRecriver = SerialBT.read();
+      Serial.println(cmdRecriver);
+      cmdRecriver;
+      execcmd(cmdRecriver);
+      while(!SerialBT.available()) delayMicroseconds(1);    
+  }
+  
+  ao(); MyBalls_is(SMALL);
+}
+
+
+void execcmd(int cmd){
+  switch (cmd) {
+    case FORWARD_CMD: 
+      fd(defaultSpeedFD);
+      break;
+    case BACKWARD_CMD :
+      fd(-defaultSpeedBD);
+      break;
+    case TURNLEFT_CMD :
+      turnleft(defaultSpeedDownLeft);
+      break;
+    case TURNRIGHT_CMD:
+      turnright(defaultSpeedDownRight);
+      break;
+    case SLIDE_LEFT_CMD:
+      slide_left(defaultSpeedSlideLeft);
+      break;
+    case SLIDE_RIGHT_CMD:
+      slide_right(defaultSpeedSlideRight);
+      break;
+    case SHOOT_BALLS :
+      MyBalls_is(BIG);
+      break;
+    
+    default:
+      MyBalls_is(SMALL);
+      ao();
+      break;
+  }
+
+}
+
+void MyBalls_is(int MODE){
+    ledcWrite(SHOOTER_PIN, (MODE == BIG)? 255 : 0 );
+}
+
+
+void turnleft(int sp){
+  #ifdef MACANUM
+  motor(1, -sp);
+  motor(2, sp);
+  motor(3, -sp);
+  motor(4, sp);
+  #endif
+}
+
+void turnright(int sp){
+  #ifdef MACANUM
+  motor(1, sp);
+  motor(2, -sp);
+  motor(3, sp);
+  motor(4, -sp);
+  #endif
+}
+
+void slide_left(int sp){
+  #ifdef MACANUM
+  motor(1, -sp);
+  motor(2, sp);
+  motor(3, sp);
+  motor(4, -sp);
+  #endif 
+}
+
+void slide_right(int sp){
+  #ifdef MACANUM
+  motor(1, sp);
+  motor(2, -sp);
+  motor(3, -sp);
+  motor(4, sp);
+  #endif
+}
