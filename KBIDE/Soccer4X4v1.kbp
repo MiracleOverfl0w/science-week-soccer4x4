@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include "BluetoothSerial.h"
 
-
 #ifdef __KBIDE__
 #include "ESPRobotV2.h"
 #endif
@@ -77,12 +76,11 @@
     #define MID_MOTORPIN1
     #define MID_MOTORPIN2
   #endif
-
-  #define SHOOTER_PIN1 
-  #define SHOOTER_PIN2 
 #endif
 
 #define SHOOTER_PIN 13
+#define SHOOTER_PIN1 13
+#define SHOOTER_PIN2 14
 
 // ************************************************
 
@@ -120,9 +118,22 @@
 
 #define BIG HIGH
 #define SMALL LOW
+//#define L298N
+#ifdef L298N 
+#define init_shooter() {\
+                    pinMode(SHOOTER_PIN1, OUTPUT); \
+                    pinMode(SHOOTER_PIN2 , OUTPUT);\
+                    }
+
+#define MyBalls_is(__DIGITAL1__ , __DIGITAL2__) {\
+                    digitalWrite(SHOOTER_PIN1 , __DIGITAL1__);\
+                    digitalWrite(SHOOTER_PIN2 ,__DIGITAL2__);\
+                    }
+
+#else
 #define init_shooter() pinMode(SHOOTER_PIN ,OUTPUT)
 #define MyBalls_is(__DIGITAL__) digitalWrite(SHOOTER_PIN, __DIGITAL__)
-
+#endif
 
 // ----------------------------------------------
 
@@ -182,7 +193,11 @@ void loop() {
       char cmdRecriver = SerialBT.read();
       if(cmdRecriver == 'K') isShooting = true;
       if(cmdRecriver == 'k') isShooting = false;
-      MyBalls_is( (isShooting) ?BIG:SMALL);
+      #ifdef L298N
+        MyBalls_is((isShooting) ? BIG : SMALL , SMALL);
+      #else MyBalls_is( (isShooting) ?BIG:SMALL);
+        MyBalls_is((isShooting)?BIG : SMALL);
+      #endif
       Serial.println(cmdRecriver);
       execcmd(cmdRecriver);
       while(!SerialBT.available()) delayMicroseconds(1);    
