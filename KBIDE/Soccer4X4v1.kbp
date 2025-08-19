@@ -18,7 +18,7 @@
 
 // ************ system and environment ************
 
-#define device_name "RCSoccerTester" // Replace with your device bluetooth's name;
+#define device_name "Jamal" // Replace with your device bluetooth's name;
 
 // Select IDE 
 //#define __ARDUINO__ (ESP32 core version 3.x.x and More dependecies lookup to docs) (Haven't implement yet.)
@@ -54,7 +54,6 @@
     #define LIFT_MOTOR 2
     #define MID_MOTOR 3
   #endif
-  #define SHOOTER_PIN 13
 #endif
 
 #ifdef __ARDUINO__
@@ -83,7 +82,7 @@
   #define SHOOTER_PIN2 
 #endif
 
-
+#define SHOOTER_PIN 13
 
 // ************************************************
 
@@ -119,8 +118,10 @@
 
 // ************************************************
 
-#define BIG -1e5
-#define SMALL 0
+#define BIG HIGH
+#define SMALL LOW
+#define init_shooter() pinMode(SHOOTER_PIN ,OUTPUT)
+#define MyBalls_is(__DIGITAL__) digitalWrite(SHOOTER_PIN, __DIGITAL__)
 
 
 // ----------------------------------------------
@@ -128,7 +129,7 @@
 // ------------- Variable -----------------------
 
 BluetoothSerial SerialBT;
-
+bool isShooting = false;
 // ------------ function prototype ---------------
 
 
@@ -144,7 +145,6 @@ void slide_right(int sp);
 void upright(int sp);
 void downright(int sp);
 
-void MyBalls_is(int MODE);
 
 
 // -----------------------------------------------
@@ -156,8 +156,6 @@ void setup() {
     init();
   #endif
 
-  ledcSetup(0, 5000, 8);
-  ledcAttachPin(SHOOTER_PIN, 0);
   Serial.begin(115200);
   SerialBT.begin(device_name);
   
@@ -167,6 +165,12 @@ void setup() {
   #elif __ARDUINO__
     waitesp32();
   #endif
+
+
+
+  init_shooter();
+
+
 }
 
 void loop() {
@@ -176,13 +180,15 @@ void loop() {
   }
   if (SerialBT.available()) {
       char cmdRecriver = SerialBT.read();
+      if(cmdRecriver == 'K') isShooting = true;
+      if(cmdRecriver == 'k') isShooting = false;
+      MyBalls_is( (isShooting) ?BIG:SMALL);
       Serial.println(cmdRecriver);
-      cmdRecriver;
       execcmd(cmdRecriver);
       while(!SerialBT.available()) delayMicroseconds(1);    
   }
   
-  ao(); MyBalls_is(SMALL);
+  ao();
 }
 
 
@@ -206,21 +212,14 @@ void execcmd(int cmd){
     case SLIDE_RIGHT_CMD:
       slide_right(defaultSpeedSlideRight);
       break;
-    case SHOOT_BALLS :
-      MyBalls_is(BIG);
-      break;
     
     default:
-      MyBalls_is(SMALL);
       ao();
       break;
   }
 
 }
 
-void MyBalls_is(int MODE){
-    ledcWrite(SHOOTER_PIN, (MODE == BIG)? 255 : 0 );
-}
 
 
 void turnleft(int sp){
